@@ -1,0 +1,35 @@
+.parent {
+    display: flex;
+    width: 800px;
+    margin: 100px   auto;
+}
+
+.left {
+    /*width: 200px;*/
+    height: 100%;
+    /*background-color: red;*/
+}
+
+.right {
+    /*display: flex;*/
+    /*flex: 1;*/
+    height: 100%;
+    /* background-color: blue;*/
+}
+.td_lable {
+    padding: 10px 0 30px 30px;
+    border: 3px;
+    width: 50%;
+}
+
+.btm{
+    margin: 0 15px 10px 10px;
+}
+
+.layui-btn{
+    background-color: #333366;
+}
+
+.layui-laypage .layui-laypage-curr .layui-laypage-em{
+    background-color: #333366;
+}

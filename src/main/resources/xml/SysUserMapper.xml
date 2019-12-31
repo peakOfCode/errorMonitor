@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.monkey.dao.UserInfoService">
+    <insert id="insertUserInfo">
+        insert into sys_user (open_id,name) values (#{p},#{q})
+    </insert>
+    <update id="setUserInfo">
+        update sys_user
+        <if test="q.id != null">
+            set content=#{q.content}
+            where
+            id = #{q.id}
+        </if>
+    </update>
+    <delete id="deleteUserInfo">
+        delete from sys_user where open_id=#{p} or name=#{q}
+    </delete>
+
+    <select id="getUserInfo" resultType="java.util.HashMap">
+        select id,name,open_id openId,content from sys_user
+        <where>
+            <if test="q.name != null and q.name != ''">
+                and name like concat('%',#{q.name},'%')
+            </if>
+        </where>
+        order by id
+    </select>
+    <select id="getInfoAll" resultType="java.util.Map">
+        select id,name,open_id openId,content from sys_user
+    </select>
+</mapper>

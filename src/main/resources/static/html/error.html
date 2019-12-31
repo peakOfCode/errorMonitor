@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>错误统计</title>
+    <!-- 引入 ECharts 文件 -->
+    <link type="text/css" rel="stylesheet" href="../layui/css/layui.css"/>
+    <link type="text/css" rel="stylesheet" href="../layui/css/modules/layer/default/layer.css"/>
+    <link type="text/css" rel="stylesheet" href="../css/error.css">
+    <script type="text/javascript" src="../layui/layui.js" charset="utf-8"></script>
+    <script src="../js/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.0"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+<!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+<div class="title"><a style="color: #FFFFFF">思跑特 错误监控</a></div>
+<table class="parent" id="">
+    <tr>
+        <td class="td_lable">
+            服务器：
+            <select name="selected" class="sel" id="select" v-model="couponSelected" @change="getTypeSelected">
+                <option :value="types.id" v-for="types in typeList">{{types.name}}</option>
+            </select>
+        </td>
+        <td class="td_lable">
+            静态：
+            <select class="sel" id="date" onchange="getTypeSelected()">
+                <option value="1">24小时</option>
+                <option value="2">本周</option>
+                <option value="3">本月</option>
+            </select>
+        </td>
+        <td class="td_lable">
+            动态：
+            <select class="sel" id="time" onchange="init()">
+                <option value="1">30秒</option>
+                <option value="2">1分钟</option>
+                <option value="3">2分钟</option>
+            </select>
+        </td>
+        <td class="td_lable">
+            <a href="./wxc.html" target="_blank">微信通知</a>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <div class="mid">
+                <div id="main" style="width: 600px;height:400px;" class="left"></div>
+                <div id="zx" style="width: 600px;height:400px;" class="right"></div>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <div class="mid">
+                <table>
+                    <tr class=" sreachTable layui-form">
+                        <td class="td_lable1">
+                            <input class="sel1 layui-input" id="name1" placeholder="服务">
+                        </td>
+                        <td class="td_lable1">
+                            <input class="sel1 layui-input" id="uuid1" placeholder="uuid">
+                        </td>
+                        <td class="td_lable1">
+                            <input class="sel1 layui-input" id="error1" placeholder="error">
+                        </td>
+                        <td class="td_lable1">
+                            <input type="text" class="sel1 layui-input" id="start"  placeholder="开始日期" autocomplete="off">
+                        </td>
+                        <td class="td_lable1">
+                            <input type="text" class="sel1 layui-input" id="end" placeholder="截至日期" autocomplete="off">
+                        </td>
+                        <td class="td_lable1">
+                            <button class="layui-btn" data-type="reload">&nbsp;&nbsp;搜索</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            <div class="mid">
+                <table class="layui-hide" id="test"></table>
+            </div>
+        </td>
+    </tr>
+
+</table>
+</body>
+<script>
+    //常规用法
+
+    layui.use(['table', 'laydate'], function () {
+        var table = layui.table;
+        var laydate = layui.laydate;
+        laydate.render({
+            elem: '#start'
+        });
+        laydate.render({
+            elem: '#end'
+        });
+        table.render({
+            elem: '#test'
+            , url: '../error/getErrorInfo'
+            , size: 'lg'
+            , page: { //支持传入 laypage 组件的所有参数（某些参数除外，如：jump/elem） - 详见文档
+                layout: ['prev', 'page', 'next', 'count', 'skip', 'limit'] //自定义分页布局
+                , groups: 5 //只显示 1 个连续页码
+                , first: "首页" //不显示首页
+                , last: "尾页" //不显示尾页
+            }
+            , cols: [[
+                {type: 'numbers', title: '序号'}
+                , {field: 'uuid', width: 180, title: 'uuid'}
+                , {field: 'name', width: 180, title: '服务', sort: true}
+                , {field: 'createTime', width: 180, title: '时间'}
+                , {field: 'content', title: '错误', width: 580}
+            ]]
+            , limits: [10, 15, 20] //显示
+            , limit: 10 //每页默认显示的数量
+            , id: 'Reload'
+        });
+        var $ = layui.$, active = {
+            reload: function () {
+                //执行重载
+                table.reload('Reload', {
+                    page: {
+                        curr: 1 //重新从第 1 页开始
+                    }
+                    , where: {
+                        start: $('#start').val()
+                        , end: $('#end').val()
+                        , error: $('#error1').val()
+                        , name: $('#name1').val()
+                        , uuid: $('#uuid1').val()
+                    }
+                });
+            }
+        };
+        $('.sreachTable .layui-btn').on('click', function () {
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+    });
+</script>
+<script type="text/javascript">
+    var myChart1 = echarts.init(document.getElementById('main'));
+    var name1 = [];
+    var time1 = [];
+    var series = [];
+
+    // 指定图表的配置项和数据
+    function main() {
+        var option = {
+            title: {
+                text: '静态'
+            },
+            tooltip: {},
+            legend: {
+                data: name1
+            },
+            xAxis: {
+                data: time1,
+                nameLocation: 'end',//坐标轴名称显示位置。
+                axisLabel: {//坐标轴刻度标签的相关设置。
+                    interval: 0,
+                    rotate: "75"
+                }
+            },
+            yAxis: {type: 'value'},
+            series: series
+        };
+        // 使用刚指定的配置项和数据显示图表。
+        myChart1.setOption(option);
+    }
+
+
+    var app2 = new Vue({
+        el: '#select',
+        data: {
+            typeList: [
+                {id: 0, name: '全部'}
+            ],
+            couponSelected: ""
+        },
+        mounted: function () {
+            axios.post('../error/getMachInfo', {}).then((response) => {
+                mid = response.data.map;
+            for (i in mid) {
+                this.typeList.push(mid[i]);
+            }
+        }).
+            catch(function (error) {
+                console.log(error);
+            });
+            getTypeSelected();
+        },
+        methods: {},
+        created() {
+            //如果没有这句代码，select中初始化会是空白的，默认选中就无法实现
+            this.couponSelected = this.typeList[0].id;
+        },
+    });
+
+    function getTypeSelected() {
+        let name = new Set([]);
+        let time = new Set([]);
+        name.length = 0;
+        time.length = 0;
+        series.length = 0;
+        $.ajax({
+            type: "POST",
+            url: "../error/setStaticInfo",
+            async: false,
+            data: {
+                name: $("#select").find("option:selected").text(),
+                date: $("#date").find("option:selected").val()
+            },
+            dataType: "json",
+            success: function (datas) {
+                mid = datas.map;
+                for (i in mid) {
+                    name.add(mid[i].name);
+                    time.add(mid[i].createTime.substr(5, 8));
+                }
+                for (const i of name) {
+                    var data = new Array();
+                    for (n in mid) {
+                        if (i === mid[n].name)
+                            data.push(mid[n].num);
+                    }
+                    // console.log(data)
+                    series.push({name: i, type: 'bar', data: data});
+                }
+                name1 = Array.from(name);
+                time1 = Array.from(time);
+                myChart1.clear();
+                main();
+            },
+            error: function (error) {
+                console.log(error)
+            }
+        });
+    };
+
+</script>
+
+<script type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('zx'));
+    var data = new Array();
+    init();
+
+    function init() {
+        myChart.clear();
+        data.length = 0;
+        var res = new Array();
+
+        function randomData() {
+            var maps = new Array();
+            $.ajax({
+                type: "POST",
+                url: "../error/getChangeInfo",
+                async: false,
+                data: {time: $("#time").find("option:selected").val()},
+                dataType: "json",
+                success: function (datas) {
+                    maps = datas.map;
+                    for (mp in maps) {
+                        var t = maps[mp].createTime.slice(0, 10).replace("-", "/").replace("-", "/") + " " + maps[mp].createTime.slice(-8);
+                        res.push({name: t, value: [t, maps[mp].num]});
+                        /*console.log(res[res.length-1])*/
+                    }
+                },
+                error: function (error) {
+                    console.log(error)
+                }
+            });
+            return res;
+        }
+
+        res = randomData();
+        for (mp in res) {
+            data.push(res[res.length - mp - 1]);
+        }
+
+        option = {
+            title: {
+                text: '动态数据'
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params) {
+                    params = params[0];
+                    return params.value[0] + ' : ' + params.value[1];
+                },
+                axisPointer: {
+                    animation: false
+                }
+            },
+            xAxis: {
+                type: 'time',
+                splitLine: {
+                    show: false
+                }
+            },
+            yAxis: {
+                type: 'value',
+                boundaryGap: [0, '100%'],
+                splitLine: {
+                    show: false
+                }
+            },
+            series: [{
+                name: '模拟数据',
+                type: 'line',
+                showSymbol: false,
+                hoverAnimation: false,
+                data: data
+            }]
+        };
+
+        setInterval(function () {
+            data.shift();
+            $.ajax({
+                type: "POST",
+                url: "../error/getChangeOneInfo",
+                data: {time: $("#time").find("option:selected").val()},
+                dataType: "json",
+                async: false,
+                success: function (datas) {
+                    var maps = datas.res[0];
+                    /*console.log(">>>>"+maps.createTime.slice(-8).replace(":","/").replace(":","/"))*/
+                    var t = maps.createTime.slice(0, 10).replace("-", "/").replace("-", "/") + " " + maps.createTime.slice(-8);
+                    data.push({name: t, value: [t, maps.num + ""]});
+                },
+                error: function (error) {
+                    console.log(error)
+                }
+            });
+
+            myChart.setOption({
+                series: [{
+                    data: data
+                }]
+            });
+        }, 1000);
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    }
+</script>
+</html>

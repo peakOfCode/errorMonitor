@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.monkey.dao.SysErrorService">
+
+	<sql id="BaseSql">
+		select id,name,content,uuid,date_format(create_time,'%Y-%m-%d  %H:%i:%s') createTime from sys_error
+	</sql>
+	<update id="updateSysError">
+		update sys_error set state = '1' where id = #{p}
+	</update>
+	<select id="setStaticInfo" resultType="java.util.Map">
+		select count(1) num, t.name, t.createTime from (
+		select  name,
+		<if test="query.hour != null">
+			date_format(create_time,'%Y-%m-%d %H:00:00') createTime
+		</if>
+		<if test="query.hour == null">
+			date_format(create_time,'%Y-%m-%d') createTime
+		</if>
+		from sys_error
+		<where>
+			<if test="query.name != null and query.name != '全部'">
+				and name like #{query.name}
+			</if>
+			<if test="query.start != null">
+				and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')>=  DATE_FORMAT(#{query.start}, '%Y-%m-%d %H:%i:%s')   ]]>
+			</if>
+			<if test="query.end != null">
+				and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')<=  DATE_FORMAT(#{query.end}, '%Y-%m-%d %H:%i:%s')   ]]>
+			</if>
+		</where>
+		) t
+		group by t.name,t.createTime
+		order by t.name,t.createTime
+	</select>
+
+	<select id="getSysError" resultType="java.util.Map" parameterType="java.util.HashMap">
+		<include refid="BaseSql"></include>
+		<where>
+		<if test="query.name != null and query.name !=''">
+			and name like #{query.name}
+		</if>
+		<if test="query.start != null">
+			and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d  %H:%i:%s')>=  DATE_FORMAT(#{query.start}, '%Y-%m-%d  %H:%i:%s')   ]]>
+		</if>
+		<if test="query.end != null">
+			and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d  %H:%i:%s')<=  DATE_FORMAT(#{query.end}, '%Y-%m-%d  %H:%i:%s')   ]]>
+		</if>
+		</where>
+	</select>
+	<select id="getSysErrorNum" resultType="java.util.Map" parameterType="java.util.HashMap">
+		select count(1) num,date_format(create_time,'%Y-%m-%d %H:%i:%s') createTime
+		from sys_error
+		<where>
+		<if test="query.name != null and query.name !=''">
+			and name like #{query.name}
+		</if>
+		<if test="query.start != null ">
+			and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')>=  DATE_FORMAT(#{query.start}, '%Y-%m-%d %H:%i:%s')   ]]>
+		</if>
+		<if test="query.end != null">
+			and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')<=  DATE_FORMAT(#{query.end}, '%Y-%m-%d %H:%i:%s')   ]]>
+		</if>
+		</where>
+		group by create_time
+		order by createTime
+	</select>
+	<select id="getType" resultType="java.util.Map">
+		select name from sys_error GROUP BY name ORDER BY name
+	</select>
+	<select id="getErrorInfo" resultType="java.util.HashMap">
+		select name,content,uuid,date_format(create_time,'%Y-%m-%d  %H:%i:%s') createTime from sys_error
+		<where>
+			<if test="query.uuid != null and query.uuid !=''">
+				and uuid like concat('%',#{query.uuid},'%')
+			</if>
+			<if test="query.name != null and query.name !=''">
+				and name like concat('%',#{query.name},'%')
+			</if>
+			<if test="query.start != null and query.start !='' ">
+				and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')>=  DATE_FORMAT(#{query.start}, '%Y-%m-%d %H:%i:%s')   ]]>
+			</if>
+			<if test="query.end != null and query.end !=''">
+				and <![CDATA[DATE_FORMAT(create_time , '%Y-%m-%d %H:%i:%s')<=  DATE_FORMAT(#{query.end}, '%Y-%m-%d %H:%i:%s')   ]]>
+			</if>
+		</where>
+		order by createTime  desc
+	</select>
+
+    <select id="findInfo" resultType="java.util.Map">
+		  select id,uuid,name,create_time createTime,content
+		  from sys_error
+		  where state=#{p}
+	</select>
+
+
+</mapper>

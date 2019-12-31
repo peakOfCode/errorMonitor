@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link type="text/css" rel="stylesheet" href="../css/wxc.css">
+    <link type="text/css" rel="stylesheet" href="../layui/css/layui.css"/>
+    <link type="text/css" rel="stylesheet" href="../layui/css/modules/layer/default/layer.css"/>
+    <script type="text/javascript" src="../layui/layui.js" charset="utf-8"></script>
+    <script type="text/javascript" src="../layui/lay/modules/layer.js" charset="utf-8"></script>
+    <script src="../js/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.0"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+<div style=" position:fixed; left:7%; top:35% ">
+    <div>
+    <img src="../img/WC.png" style="width:250px;">
+    </div>
+    <div style="margin-left:25px;">
+        请关注公众号，然后刷新页面
+    </div>
+</div>
+<table class="parent" id="">
+    <tr>
+        <td class="site-demo-button">
+            <table class="layui-hide" id="test" lay-filter="test"></table>
+        </td>
+    </tr>
+</table>
+</body>
+<script>
+    //常规用法
+    $.ajax({
+        type: "POST",
+        url: "../wxc/getInfoAll",
+        async: false,
+        data: {},
+        dataType: "json",
+        success: function (datas) {
+            loading();
+            layer.msg("更新成功！");
+        },
+        error: function (error) {
+            loading();
+            layer.msg("更新失败！");
+            console.log(error);
+        }
+    });
+    function loading() {
+        layui.use(['table', 'laydate'], function () {
+            var table = layui.table;
+            var laydate = layui.laydate;
+            laydate.render({
+                elem: '#start'
+            });
+            laydate.render({
+                elem: '#end'
+            });
+            table.render({
+                elem: '#test'
+                , url: '../wxc/getUserInfo'
+                , size: 'lg'
+                , page: { //支持传入 laypage 组件的所有参数（某些参数除外，如：jump/elem） - 详见文档
+                    layout: ['prev', 'page', 'next', 'count', 'skip', 'limit'] //自定义分页布局
+                    , groups: 5 //只显示 1 个连续页码
+                    , first: "首页" //不显示首页
+                    , last: "尾页" //不显示尾页
+                }
+                , cols: [[
+                    {type: 'numbers', title: '序号'}
+                    , {type: 'id', title: 'id', hide: true}
+                    , {field: 'name', width: 180, title: '名称', sort: true}
+                    , {
+                        field: 'content',
+                        title: '内容(筛选关键字，如类名UserGeneralServiceImpl或方法名updateAuthenState，多个;分割)',
+                        width: 780,
+                        edit: 'text'
+                    }
+                ]]
+                , limits: [10, 15, 20] //显示
+                , limit: 10 //每页默认显示的数量
+                , id: 'Reload'
+            });
+            //监听单元格编辑
+            table.on('edit(test)', function (obj) {
+                var value = obj.value //得到修改后的值
+                    , data = obj.data //得到所在行所有键值
+                $.ajax({
+                    type: "POST",
+                    url: "../wxc/setUserInfo",
+                    async: false,
+                    data: {
+                        id: data.id,
+                        content: value
+                    },
+                    dataType: "json",
+                    success: function (datas) {
+                        layer.msg("修改成功！");
+                    },
+                    error: function (error) {
+                        layer.msg("修改失败！");
+                        console.log(error)
+                    }
+                });
+
+            });
+        });
+    }
+</script>
+</html>
